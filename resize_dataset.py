@@ -39,7 +39,7 @@ for n in left_small_dataset:
     i += 1
 
 i = 1
-for n in left_small_dataset:
+for n in right_small_dataset:
     cv2.imwrite('/home/eduardocaldasfonseca/Desktop/cobot-monitor-dataset/right-small/right-small' + str(i) + '.jpg', n)
     i += 1
 
