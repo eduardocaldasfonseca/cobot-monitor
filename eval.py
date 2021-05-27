@@ -13,42 +13,28 @@ from natsort import natsorted
 
 left_meta_dict = {}
 right_meta_dict = {}
+joint_dict = {}
 
 with open("/home/eduardocaldasfonseca/Desktop/cobot-monitor-dataset/left-annotation/meta.json") as f:
     left_meta_data = json.load(f)
     for code in left_meta_data['classes'][0]['geometry_config']['nodes']:
         label = left_meta_data['classes'][0]['geometry_config']['nodes'][code]['label']
-        left_meta_dict['code'] = label
+        left_meta_dict[code] = label
         # print('Node: ' + code + ', Label: ' + left_meta_dict['code'])
 
 with open("/home/eduardocaldasfonseca/Desktop/cobot-monitor-dataset/right-annotation/meta.json") as f:
     right_meta_data = json.load(f)
     for code in right_meta_data['classes'][0]['geometry_config']['nodes']:
         label = right_meta_data['classes'][0]['geometry_config']['nodes'][code]['label']
-        right_meta_dict['code'] = label
+        right_meta_dict[code] = label
         # print('Node: ' + code + ', Label: ' + right_meta_dict['code'])
 
 if left_meta_dict == right_meta_dict:
     joint_dict = left_meta_dict
-
-# === ANNOTATION === #
-# Path to directory
-left_folder = glob.glob(
-    '/home/eduardocaldasfonseca/Desktop/cobot-monitor-dataset/left-annotation/left-small/ann/*.json')
-right_folder = glob.glob(
-    '/home/eduardocaldasfonseca/Desktop/cobot-monitor-dataset/right-annotation/right-small/ann/*.json')
-
-# Json file Arrays:
-left_dataset, right_dataset = [], []
-
-# Loading annotations
-for json in left_folder:
-    n = cv2.imread(json)
-    left_dataset.append(n)
-
-for json in right_folder:
-    n = cv2.imread(json)
-    right_dataset.append(n)
+    print('Joint Dictionary built successfully')
+else:
+    print('ERROR: Joint Dictionary not built successfully - left and right dictionaries are different')
+print()
 
 # === BUILD ANNOTATION DICTIONARIES === #
 
@@ -110,3 +96,12 @@ for file_name in right_file_list:
             pass
     # Saves temporary dictionary as the value for the key 'rightx' (the name of the image file)
     right_annot_dict['right' + str(right_counter_total)] = temp_dict
+
+print('Left Annotation Dictionary built successfully')
+print('Total left dataset images: ' + str(left_counter_total))
+print('Empty left images: ' + str(left_counter_empty))
+
+print()
+print('Right Annotation Dictionary built successfully')
+print('Total right dataset images: ' + str(right_counter_total))
+print('Empty right images: ' + str(right_counter_empty))
