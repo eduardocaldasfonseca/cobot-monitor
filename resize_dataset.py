@@ -2,7 +2,7 @@ import cv2
 import glob
 
 
-#images = [cv2.imread(file) for file in glob.glob("path/to/files/*.png")]
+# images = [cv2.imread(file) for file in glob.glob("path/to/files/*.png")]
 
 # Path to directory
 left_path = glob.glob("/home/eduardocaldasfonseca/Desktop/cobot-monitor-dataset/left/*.jpg")

@@ -1,0 +1,231 @@
+{
+    "classes": [
+        {
+            "title": "Skeleton",
+            "shape": "graph",
+            "color": "#EE2727",
+            "geometry_config": {
+                "edges": [
+                    {
+                        "dst": "b8737dd3-b95b-45be-8b6f-0133e238eb5b",
+                        "src": "9b852c05-5e47-420a-9a46-86440bf0782c",
+                        "label": ""
+                    },
+                    {
+                        "dst": "8f1581c5-e158-4231-b399-e1fd05eed204",
+                        "src": "b8737dd3-b95b-45be-8b6f-0133e238eb5b",
+                        "label": ""
+                    },
+                    {
+                        "dst": "33c72455-9676-4c0c-ac55-8af1a2e5de1a",
+                        "src": "8f1581c5-e158-4231-b399-e1fd05eed204",
+                        "label": ""
+                    },
+                    {
+                        "dst": "d950f8af-a92b-4f28-a3d8-561add85fe73",
+                        "src": "9b852c05-5e47-420a-9a46-86440bf0782c",
+                        "label": ""
+                    },
+                    {
+                        "dst": "9b852c05-5e47-420a-9a46-86440bf0782c",
+                        "src": "58d71231-c7db-4683-a62d-c5b87f2c550c",
+                        "label": ""
+                    },
+                    {
+                        "dst": "d950f8af-a92b-4f28-a3d8-561add85fe73",
+                        "src": "c7cda86b-e36e-498b-91e1-8dbdb2b74dd8",
+                        "label": ""
+                    },
+                    {
+                        "dst": "c7cda86b-e36e-498b-91e1-8dbdb2b74dd8",
+                        "src": "8e77aa80-ff9a-4226-a0a8-5dd0836403aa",
+                        "label": ""
+                    },
+                    {
+                        "dst": "e65eb824-7d0f-4344-a35e-8fb8f9683409",
+                        "src": "58d71231-c7db-4683-a62d-c5b87f2c550c",
+                        "label": ""
+                    },
+                    {
+                        "dst": "46304555-805a-43bc-aaf5-ee87ad37da04",
+                        "src": "e65eb824-7d0f-4344-a35e-8fb8f9683409",
+                        "label": ""
+                    },
+                    {
+                        "dst": "feef618f-6e72-4210-a49f-89bfca0b3af7",
+                        "src": "9b852c05-5e47-420a-9a46-86440bf0782c",
+                        "label": ""
+                    },
+                    {
+                        "dst": "1dad6ff5-d7ea-44a2-bbd3-5934f16fbd43",
+                        "src": "feef618f-6e72-4210-a49f-89bfca0b3af7",
+                        "label": ""
+                    },
+                    {
+                        "dst": "4e1f1888-956e-421b-86c3-1d45cac3d9bc",
+                        "src": "1dad6ff5-d7ea-44a2-bbd3-5934f16fbd43",
+                        "label": ""
+                    },
+                    {
+                        "dst": "55479fb3-644e-4fc6-84d8-4bcb26d39790",
+                        "src": "9b852c05-5e47-420a-9a46-86440bf0782c",
+                        "label": ""
+                    },
+                    {
+                        "dst": "55479fb3-644e-4fc6-84d8-4bcb26d39790",
+                        "src": "14c2d82c-5ccd-45d9-be81-5851ec216b2d",
+                        "label": ""
+                    },
+                    {
+                        "dst": "bb9f521a-501b-43b8-9c5c-75d90c63b9c7",
+                        "src": "14c2d82c-5ccd-45d9-be81-5851ec216b2d",
+                        "label": ""
+                    },
+                    {
+                        "dst": "52fe0b68-0700-4bbb-a737-764deac8f816",
+                        "src": "55479fb3-644e-4fc6-84d8-4bcb26d39790",
+                        "label": ""
+                    },
+                    {
+                        "dst": "c0aba91a-5d7b-4d08-bf18-bd6968a1bf28",
+                        "src": "52fe0b68-0700-4bbb-a737-764deac8f816",
+                        "label": ""
+                    }
+                ],
+                "nodes": {
+                    "9b852c05-5e47-420a-9a46-86440bf0782c": {
+                        "label": "1",
+                        "loc": [
+                            135,
+                            126
+                        ]
+                    },
+                    "b8737dd3-b95b-45be-8b6f-0133e238eb5b": {
+                        "label": "2",
+                        "loc": [
+                            47,
+                            129
+                        ]
+                    },
+                    "8f1581c5-e158-4231-b399-e1fd05eed204": {
+                        "label": "3",
+                        "loc": [
+                            13,
+                            208
+                        ]
+                    },
+                    "33c72455-9676-4c0c-ac55-8af1a2e5de1a": {
+                        "label": "4",
+                        "loc": [
+                            0,
+                            297
+                        ]
+                    },
+                    "feef618f-6e72-4210-a49f-89bfca0b3af7": {
+                        "label": "5",
+                        "loc": [
+                            231,
+                            130
+                        ]
+                    },
+                    "1dad6ff5-d7ea-44a2-bbd3-5934f16fbd43": {
+                        "label": "6",
+                        "loc": [
+                            242,
+                            219
+                        ]
+                    },
+                    "4e1f1888-956e-421b-86c3-1d45cac3d9bc": {
+                        "label": "7",
+                        "loc": [
+                            248,
+                            317
+                        ]
+                    },
+                    "d950f8af-a92b-4f28-a3d8-561add85fe73": {
+                        "label": "8",
+                        "loc": [
+                            82,
+                            309
+                        ]
+                    },
+                    "c7cda86b-e36e-498b-91e1-8dbdb2b74dd8": {
+                        "label": "9",
+                        "loc": [
+                            76,
+                            411
+                        ]
+                    },
+                    "8e77aa80-ff9a-4226-a0a8-5dd0836403aa": {
+                        "label": "10",
+                        "loc": [
+                            73,
+                            515
+                        ]
+                    },
+                    "58d71231-c7db-4683-a62d-c5b87f2c550c": {
+                        "label": "11",
+                        "loc": [
+                            178,
+                            309
+                        ]
+                    },
+                    "e65eb824-7d0f-4344-a35e-8fb8f9683409": {
+                        "label": "12",
+                        "loc": [
+                            172,
+                            409
+                        ]
+                    },
+                    "46304555-805a-43bc-aaf5-ee87ad37da04": {
+                        "label": "13",
+                        "loc": [
+                            178,
+                            513
+                        ]
+                    },
+                    "14c2d82c-5ccd-45d9-be81-5851ec216b2d": {
+                        "label": "14",
+                        "loc": [
+                            108,
+                            2
+                        ]
+                    },
+                    "52fe0b68-0700-4bbb-a737-764deac8f816": {
+                        "label": "15",
+                        "loc": [
+                            149,
+                            0
+                        ]
+                    },
+                    "bb9f521a-501b-43b8-9c5c-75d90c63b9c7": {
+                        "label": "16",
+                        "loc": [
+                            80,
+                            21
+                        ]
+                    },
+                    "c0aba91a-5d7b-4d08-bf18-bd6968a1bf28": {
+                        "label": "17",
+                        "loc": [
+                            176,
+                            21
+                        ]
+                    },
+                    "55479fb3-644e-4fc6-84d8-4bcb26d39790": {
+                        "label": "0",
+                        "color": "#17489B",
+                        "loc": [
+                            129,
+                            31
+                        ]
+                    }
+                }
+            },
+            "id": 2925683,
+            "hotkey": ""
+        }
+    ],
+    "tags": [],
+    "projectType": "images"
+}
