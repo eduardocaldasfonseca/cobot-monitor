@@ -1,5 +1,3 @@
-import cv2
-import glob
 import json
 import os
 from natsort import natsorted
