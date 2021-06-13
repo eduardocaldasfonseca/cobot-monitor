@@ -23,7 +23,8 @@ meta = {'Run Number': run_number,
         'Model': model,
         'Dataset': dataset,
         'With image creation?': create_images,
-        'Controlled setup?': controlled_setup}
+        'Controlled setup?': controlled_setup
+        }
 
 # === Create list containing all images of dataset: === #
 image_list = []  # empty list for all the images in dataset_path

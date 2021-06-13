@@ -35,7 +35,8 @@ meta = {'Run Number': run_number,
         'With image creation?': create_images,
         'Controlled setup?': controlled_setup,
         'Number people max flag': max_n_people,
-        'Net resolution flag': net_resolution}
+        'Net resolution flag': net_resolution
+        }
 
 try:
     # === Flags === #
