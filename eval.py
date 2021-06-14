@@ -1,8 +1,10 @@
 import json
 import os
 from natsort import natsorted
+import math
 
 output_path = '/home/eduardocaldasfonseca/Desktop/cobot-monitor-dataset/eval_output'
+output_flag = True
 
 # === BUILD SUPERVISE.LY JOINT DICTIONARY === #
 # In supervise.ly, a 'Skeleton' class is defined with nodes that represent each skeleton joint, labelled from 0 to
@@ -35,8 +37,9 @@ else:
     print('ERROR: Joint Dictionary not built successfully - left and right dictionaries are different')
 print()
 
-with open(output_path + '/annotation_joint_dict.json', 'w', encoding='utf-8') as f:
-    json.dump(joint_dict, f, ensure_ascii=False, indent=4)
+if output_flag:
+    with open(output_path + '/annotation_joint_dict.json', 'w', encoding='utf-8') as f:
+        json.dump(joint_dict, f, ensure_ascii=False, indent=4)
 
 
 
@@ -135,8 +138,9 @@ left_annot_dict['Total images'] = left_counter_total
 print('Empty left images: ' + str(left_counter_empty))
 left_annot_dict['Empty images'] = left_counter_empty
 
-with open(output_path + '/left_annot_dict.json', 'w', encoding='utf-8') as f:
-    json.dump(left_annot_dict, f, ensure_ascii=False, indent=4)
+if output_flag:
+    with open(output_path + '/left_annot_dict.json', 'w', encoding='utf-8') as f:
+        json.dump(left_annot_dict, f, ensure_ascii=False, indent=4)
 
 print()
 print('Right Annotation Dictionary built successfully')
@@ -145,8 +149,9 @@ right_annot_dict['Total images'] = right_counter_total
 print('Empty right images: ' + str(right_counter_empty))
 right_annot_dict['Empty images'] = right_counter_empty
 
-with open(output_path + '/right_annot_dict.json', 'w', encoding='utf-8') as f:
-    json.dump(right_annot_dict, f, ensure_ascii=False, indent=4)
+if output_flag:
+    with open(output_path + '/right_annot_dict.json', 'w', encoding='utf-8') as f:
+        json.dump(right_annot_dict, f, ensure_ascii=False, indent=4)
 
 
 
@@ -235,8 +240,9 @@ left_openpifpaf_dict['Empty images'] = left_counter_empty
 print('Extra (>1 skeletons) left images: ' + str(left_counter_extra))
 left_openpifpaf_dict['Extra images'] = left_counter_extra
 
-with open(output_path + '/left_openpifpaf_dict.json', 'w', encoding='utf-8') as f:
-    json.dump(left_openpifpaf_dict, f, ensure_ascii=False, indent=4)
+if output_flag:
+    with open(output_path + '/left_openpifpaf_dict.json', 'w', encoding='utf-8') as f:
+        json.dump(left_openpifpaf_dict, f, ensure_ascii=False, indent=4)
 
 
 for right_counter_total, file_name in enumerate(openpifpaf_right_file_list):
@@ -276,8 +282,9 @@ right_openpifpaf_dict['Empty images'] = right_counter_empty
 print('Extra (>1 skeletons) right images: ' + str(right_counter_extra))
 right_openpifpaf_dict['Extra images'] = right_counter_extra
 
-with open(output_path + '/right_openpifpaf_dict.json', 'w', encoding='utf-8') as f:
-    json.dump(right_openpifpaf_dict, f, ensure_ascii=False, indent=4)
+if output_flag:
+    with open(output_path + '/right_openpifpaf_dict.json', 'w', encoding='utf-8') as f:
+        json.dump(right_openpifpaf_dict, f, ensure_ascii=False, indent=4)
 
 
 # # === BUILD OPENPOSE JOINT DICTIONARIES === #
@@ -366,8 +373,9 @@ left_openpose_dict['Empty images'] = left_counter_empty
 print('Extra (>1 skeletons) left images: ' + str(left_counter_extra))
 left_openpose_dict['Extra images'] = left_counter_extra
 
-with open(output_path + '/left_openpose_dict.json', 'w', encoding='utf-8') as f:
-    json.dump(left_openpose_dict, f, ensure_ascii=False, indent=4)
+if output_flag:
+    with open(output_path + '/left_openpose_dict.json', 'w', encoding='utf-8') as f:
+        json.dump(left_openpose_dict, f, ensure_ascii=False, indent=4)
 
 for right_counter_total, file_name in enumerate(openpose_right_file_list):
     temp_dict = {}  # temporary dictionary for skeletons, node label and location tuple
@@ -408,11 +416,566 @@ right_openpose_dict['Empty images'] = right_counter_empty
 print('Extra (>1 skeletons) right images: ' + str(right_counter_extra))
 right_openpose_dict['Extra images'] = right_counter_extra
 
-with open(output_path + '/right_openpose_dict.json', 'w', encoding='utf-8') as f:
-    json.dump(right_openpose_dict, f, ensure_ascii=False, indent=4)
+if output_flag:
+    with open(output_path + '/right_openpose_dict.json', 'w', encoding='utf-8') as f:
+        json.dump(right_openpose_dict, f, ensure_ascii=False, indent=4)
 
-# === COMPARISONS === #
 
-# OpenPifPaf
-# for image in left_annot_dict:
-    # for joint in left_annot_dict[image]
+# ================================================ #
+# ========= EVALUATE AND OUTPUT METRICS ========== #
+# ================================================ #
+
+# ======================================================================== OpenPifPaf left-small dataset
+results_left_openpifpaf = {}
+
+# Initialize variables that are used to calculate metrics:
+joint_total_left_openpifpaf = 0
+mpjpe_left_openpifpaf = 0  # Total error for all images in this dataset
+fp_joint_total_left_openpifpaf = 0
+fn_joint_total_left_openpifpaf = 0
+
+mpjpe_threshold = 50  # This should be a percentage of the bounding box size but we will ballpark to filter out
+# false positives for now and then later program an adaptive threshold based on height (ymax-ymin) of the skeleton
+
+for image in left_openpifpaf_dict:
+    if image.startswith('left'):  # excludes the keys that are extra information about the number of images
+        image_dict = {}
+
+        # Save values related to annotation:
+        if len(left_annot_dict[image]) == 0:  # In the annotation, there is either a single skeleton or there is none
+            annotated_skeleton_total = 0
+            annotated_joint_total = 0
+        else:
+            annotated_skeleton_total = 1
+            annotated_joint_total = len(left_annot_dict[image])
+        image_dict['annotated_skeleton_total'] = annotated_skeleton_total
+        image_dict['annotated_joint_total'] = annotated_joint_total
+
+        matching_skeleton_total = 0  # the number of skeletons that match with annot (mpjpe is within the threshold)
+        # This helps detect cases where the method detects the operator but does not associate all the joints,
+        # creating more than one detected skeleton.
+        matching_skeleton_dict = {}  # contains dictionaries of each skeleton that matches with annotation
+
+        for skeleton in left_openpifpaf_dict[image]:
+            if str(skeleton).startswith('skeleton_number'):  # extract the number of skeletons OpenPifPaf detected
+                pifpaf_skeleton_total = left_openpifpaf_dict[image][skeleton]
+            else:  # all other keys are skeletons
+                skeleton_dict = {}  # Temporary dict to save this skeleton's results. The key corresponds to the
+                # joint, using the annotation label, or relevant variables such as joint_counter_total
+
+                joint_counter_total = 0  # Number of total joints detected by OpenPifPaf
+                fp_joint_total = 0  # Number of false positive joints detected by OpenPifPaf (no match in annotation)
+                fn_joint_total = 0  # Number of false negative joints (present in annotation but no detected by PifPaf)
+                error_total = 0  # Used to calculate mpjpe
+
+                for joint in left_openpifpaf_dict[image][skeleton]:
+                    pifpaf_coordinates = [int(left_openpifpaf_dict[image][skeleton][joint][index]) for index in [0, 1]]
+                    pifpaf_confidence = left_openpifpaf_dict[image][skeleton][joint][2]
+                    label = openpifpaf_to_annotation_dict[int(joint)]  # corresponding joint label in annotation
+                    annotated_coordinates: object = left_annot_dict[image].get(str(label))  # We use the .get()
+                    # method to handle the cases where the annotation does not have a matching joint, aka,
+                    # a joint false positive
+
+                    if annotated_coordinates:
+                        error = round(math.sqrt(
+                            math.pow(pifpaf_coordinates[0] - annotated_coordinates[0], 2) +
+                            math.pow(pifpaf_coordinates[1] - annotated_coordinates[1], 2)), 3)
+                        skeleton_dict[label] = [error, pifpaf_confidence]  # for each joint, we save its error and
+                        # confidence score (so that we can later plot them both)
+                        error_total += error
+                    else:
+                        #  There is no matching joint in the annotation, this is a "false" positive joint.
+                        skeleton_dict[label] = ['fp', pifpaf_confidence]  # fp = false positive
+                        fp_joint_total += 1
+
+                    joint_counter_total += 1
+
+                # Check if any annotated joints are missing from this skeleton (false negatives)
+                for label in left_annot_dict[image]:
+                    if int(label) in skeleton_dict:
+                        continue
+                    else:
+                        if label != '1':
+                            skeleton_dict[label] = ['fn', 0]
+                            fn_joint_total += 1
+                        else:  # Because OpenPifPaf does not have a corresponding 'Chest' keypoint (label 1)
+                            skeleton_dict[label] = ['invalid', 0]
+
+                # Save in this skeleton's dictionary:
+                skeleton_dict['joint_counter_total'] = joint_counter_total
+                # Calculate the Mean Per Joint Position Error (in pixels) of this skeleton
+                if joint_counter_total != 0:
+                    mpjpe = round(error_total / joint_counter_total, 4)
+                    skeleton_dict['mpjpe'] = mpjpe
+                    skeleton_dict['fp_joint_total'] = fp_joint_total
+                    skeleton_dict['fn_joint_total'] = fn_joint_total
+                
+                if mpjpe_threshold > mpjpe > 0:  # We include the mpjpe > 0 condition in order to not match false
+                    # positive skeletons (which would have error exactly equal to 0 since that is the initial value
+                    # of error_total)
+                    matching_skeleton_total += 1
+                    matching_skeleton_dict[skeleton] = skeleton_dict
+
+        image_dict['pifpaf_skeleton_total'] = pifpaf_skeleton_total
+        image_dict['matching_skeleton_total'] = matching_skeleton_total
+        image_dict['matching_skeletons'] = matching_skeleton_dict
+
+        # Calculate the metrics of this image:
+        joint_image_total = 0
+        mpjpe_image_total = 0
+        mpjpe_image_average = 0
+        fp_joint_image_total = 0
+        fn_joint_image_total = 0
+        if len(matching_skeleton_dict) != 0:
+            for matching_skeleton in matching_skeleton_dict:
+                joint_image_total += matching_skeleton_dict[matching_skeleton]['joint_counter_total']
+                mpjpe_image_total += matching_skeleton_dict[matching_skeleton]['mpjpe']
+                fp_joint_image_total += matching_skeleton_dict[matching_skeleton]['fp_joint_total']
+                fn_joint_image_total += matching_skeleton_dict[matching_skeleton]['fn_joint_total']
+            mpjpe_image_average = round(mpjpe_image_total / len(matching_skeleton_dict), 3)
+
+        # Save to image metrics to its dictionary
+        image_dict['joint_image_total'] = joint_image_total
+        image_dict['mpjpe_image_average'] = mpjpe_image_average
+        image_dict['fp_joint_image_total'] = fp_joint_image_total
+        image_dict['fn_joint_image_total'] = fp_joint_image_total
+
+        # Add to variables that will determine overall metrics for this dataset
+        joint_total_left_openpifpaf += joint_image_total
+        mpjpe_left_openpifpaf += mpjpe_image_average
+        fp_joint_total_left_openpifpaf += fp_joint_image_total
+        fn_joint_total_left_openpifpaf += fn_joint_image_total
+
+        results_left_openpifpaf[image] = image_dict
+
+# Overall dataset metrics:
+image_total = left_openpifpaf_dict['Total images']
+results_left_openpifpaf['joint_total_average_per_image'] = round(joint_total_left_openpifpaf / image_total, 3)
+results_left_openpifpaf['mpjpe_average_per_image'] = \
+    round(mpjpe_left_openpifpaf / image_total, 3)
+results_left_openpifpaf['fp_joint_total_average_per_image'] = round(fp_joint_total_left_openpifpaf / image_total, 3)
+results_left_openpifpaf['fn_joint_total_average_per_image'] = round(fn_joint_total_left_openpifpaf / image_total, 3)
+
+if output_flag:
+    with open(output_path + '/results_left_openpifpaf.json', 'w', encoding='utf-8') as f:
+        json.dump(results_left_openpifpaf, f, ensure_ascii=False, indent=4)
+
+print()
+print('Left OpenPifPaf Results json built successfully')
+
+
+# =================================================================== OpenPifPaf right-small dataset
+results_right_openpifpaf = {}
+
+# Initialize variables that are used to calculate metrics:
+joint_total_right_openpifpaf = 0
+mpjpe_right_openpifpaf = 0  # Total error for all images in this dataset
+fp_joint_total_right_openpifpaf = 0
+fn_joint_total_right_openpifpaf = 0
+
+mpjpe_threshold = 50  # This should be a percentage of the bounding box size but we will ballpark to filter out
+# false positives for now and then later program an adaptive threshold based on height (ymax-ymin) of the skeleton
+
+for image in right_openpifpaf_dict:
+    if image.startswith('right'):  # excludes the keys that are extra information about the number of images
+        image_dict = {}
+
+        # Save values related to annotation:
+        if len(right_annot_dict[image]) == 0:  # In the annotation, there is either a single skeleton or there is none
+            annotated_skeleton_total = 0
+            annotated_joint_total = 0
+        else:
+            annotated_skeleton_total = 1
+            annotated_joint_total = len(right_annot_dict[image])
+        image_dict['annotated_skeleton_total'] = annotated_skeleton_total
+        image_dict['annotated_joint_total'] = annotated_joint_total
+
+        matching_skeleton_total = 0  # the number of skeletons that match with annot (mpjpe is within the threshold)
+        # This helps detect cases where the method detects the operator but does not associate all the joints,
+        # creating more than one detected skeleton.
+        matching_skeleton_dict = {}  # contains dictionaries of each skeleton that matches with annotation
+
+        for skeleton in right_openpifpaf_dict[image]:
+            if str(skeleton).startswith('skeleton_number'):  # extract the number of skeletons OpenPifPaf detected
+                pifpaf_skeleton_total = right_openpifpaf_dict[image][skeleton]
+            else:  # all other keys are skeletons
+                skeleton_dict = {}  # Temporary dict to save this skeleton's results. The key corresponds to the
+                # joint, using the annotation label, or relevant variables such as joint_counter_total
+
+                joint_counter_total = 0  # Number of total joints detected by OpenPifPaf
+                fp_joint_total = 0  # Number of false positive joints detected by OpenPifPaf (no match in annotation)
+                fn_joint_total = 0  # Number of false negative joints (present in annotation but no detected by PifPaf)
+                error_total = 0  # Used to calculate mpjpe
+
+                for joint in right_openpifpaf_dict[image][skeleton]:
+                    pifpaf_coordinates = [int(right_openpifpaf_dict[image][skeleton][joint][index]) for index in [0, 1]]
+                    pifpaf_confidence = right_openpifpaf_dict[image][skeleton][joint][2]
+                    label = openpifpaf_to_annotation_dict[int(joint)]  # corresponding joint label in annotation
+                    annotated_coordinates: object = right_annot_dict[image].get(str(label))  # We use the .get()
+                    # method to handle the cases where the annotation does not have a matching joint, aka,
+                    # a joint false positive
+
+                    if annotated_coordinates:
+                        error = round(math.sqrt(
+                            math.pow(pifpaf_coordinates[0] - annotated_coordinates[0], 2) +
+                            math.pow(pifpaf_coordinates[1] - annotated_coordinates[1], 2)), 3)
+                        skeleton_dict[label] = [error, pifpaf_confidence]  # for each joint, we save its error and
+                        # confidence score (so that we can later plot them both)
+                        error_total += error
+                    else:
+                        #  There is no matching joint in the annotation, this is a "false" positive joint.
+                        skeleton_dict[label] = ['fp', pifpaf_confidence]  # fp = false positive
+                        fp_joint_total += 1
+
+                    joint_counter_total += 1
+
+                # Check if any annotated joints are missing from this skeleton (false negatives)
+                for label in right_annot_dict[image]:
+                    if int(label) in skeleton_dict:
+                        continue
+                    else:
+                        if label != '1':
+                            skeleton_dict[label] = ['fn', 0]
+                            fn_joint_total += 1
+                        else:  # Because OpenPifPaf does not have a corresponding 'Chest' keypoint (label 1)
+                            skeleton_dict[label] = ['invalid', 0]
+
+                # Save in this skeleton's dictionary:
+                skeleton_dict['joint_counter_total'] = joint_counter_total
+                # Calculate the Mean Per Joint Position Error (in pixels) of this skeleton
+                if joint_counter_total != 0:
+                    mpjpe = round(error_total / joint_counter_total, 4)
+                    skeleton_dict['mpjpe'] = mpjpe
+                    skeleton_dict['fp_joint_total'] = fp_joint_total
+                    skeleton_dict['fn_joint_total'] = fn_joint_total
+
+                if mpjpe_threshold > mpjpe > 0:  # We include the mpjpe > 0 condition in order to not match false
+                    # positive skeletons (which would have error exactly equal to 0 since that is the initial value
+                    # of error_total)
+                    matching_skeleton_total += 1
+                    matching_skeleton_dict[skeleton] = skeleton_dict
+
+        image_dict['pifpaf_skeleton_total'] = pifpaf_skeleton_total
+        image_dict['matching_skeleton_total'] = matching_skeleton_total
+        image_dict['matching_skeletons'] = matching_skeleton_dict
+
+        # Calculate the metrics of this image:
+        joint_image_total = 0
+        mpjpe_image_total = 0
+        mpjpe_image_average = 0
+        fp_joint_image_total = 0
+        fn_joint_image_total = 0
+        if len(matching_skeleton_dict) != 0:
+            for matching_skeleton in matching_skeleton_dict:
+                joint_image_total += matching_skeleton_dict[matching_skeleton]['joint_counter_total']
+                mpjpe_image_total += matching_skeleton_dict[matching_skeleton]['mpjpe']
+                fp_joint_image_total += matching_skeleton_dict[matching_skeleton]['fp_joint_total']
+                fn_joint_image_total += matching_skeleton_dict[matching_skeleton]['fn_joint_total']
+            mpjpe_image_average = round(mpjpe_image_total / len(matching_skeleton_dict), 3)
+
+        # Save to image metrics to its dictionary
+        image_dict['joint_image_total'] = joint_image_total
+        image_dict['mpjpe_image_average'] = mpjpe_image_average
+        image_dict['fp_joint_image_total'] = fp_joint_image_total
+        image_dict['fn_joint_image_total'] = fp_joint_image_total
+
+        # Add to variables that will determine overall metrics for this dataset
+        joint_total_right_openpifpaf += joint_image_total
+        mpjpe_right_openpifpaf += mpjpe_image_average
+        fp_joint_total_right_openpifpaf += fp_joint_image_total
+        fn_joint_total_right_openpifpaf += fn_joint_image_total
+
+        results_right_openpifpaf[image] = image_dict
+
+# Overall dataset metrics:
+image_total = right_openpifpaf_dict['Total images']
+results_right_openpifpaf['joint_total_average_per_image'] = round(joint_total_right_openpifpaf / image_total, 3)
+results_right_openpifpaf['mpjpe_average_per_image'] = \
+    round(mpjpe_right_openpifpaf / image_total, 3)
+results_right_openpifpaf['fp_joint_total_average_per_image'] = round(fp_joint_total_right_openpifpaf / image_total, 3)
+results_right_openpifpaf['fn_joint_total_average_per_image'] = round(fn_joint_total_right_openpifpaf / image_total, 3)
+
+if output_flag:
+    with open(output_path + '/results_right_openpifpaf.json', 'w', encoding='utf-8') as f:
+        json.dump(results_right_openpifpaf, f, ensure_ascii=False, indent=4)
+
+print()
+print('Right OpenPifPaf Results json built successfully')
+
+
+# ============================================================================= OpenPose left-small dataset
+results_left_openpose = {}
+
+# Initialize variables that are used to calculate metrics:
+joint_total_left_openpose = 0
+mpjpe_left_openpose = 0  # Total error for all images in this dataset
+fp_joint_total_left_openpose = 0
+fn_joint_total_left_openpose = 0
+
+mpjpe_threshold = 50  # This should be a percentage of the bounding box size but we will ballpark to filter out
+# false positives for now and then later program an adaptive threshold based on height (ymax-ymin) of the skeleton
+
+for image in left_openpose_dict:
+    if image.startswith('left'):  # excludes the keys that are extra information about the number of images
+        image_dict = {}
+
+        # Save values related to annotation:
+        if len(left_annot_dict[image]) == 0:  # In the annotation, there is either a single skeleton or there is none
+            annotated_skeleton_total = 0
+            annotated_joint_total = 0
+        else:
+            annotated_skeleton_total = 1
+            annotated_joint_total = len(left_annot_dict[image])
+        image_dict['annotated_skeleton_total'] = annotated_skeleton_total
+        image_dict['annotated_joint_total'] = annotated_joint_total
+
+        matching_skeleton_total = 0  # the number of skeletons that match with annot (mpjpe is within the threshold)
+        # This helps detect cases where the method detects the operator but does not associate all the joints,
+        # creating more than one detected skeleton.
+        matching_skeleton_dict = {}  # contains dictionaries of each skeleton that matches with annotation
+
+        for skeleton in left_openpose_dict[image]:
+            if str(skeleton).startswith('skeleton_number'):  # extract the number of skeletons OpenPose detected
+                openpose_skeleton_total = left_openpose_dict[image][skeleton]
+            else:  # all other keys are skeletons
+                skeleton_dict = {}  # Temporary dict to save this skeleton's results. The key corresponds to the
+                # joint, using the annotation label, or relevant variables such as joint_counter_total
+
+                joint_counter_total = 0  # Number of total joints detected by OpenPose
+                fp_joint_total = 0  # Number of false positive joints detected by OpenPose (no match in annotation)
+                fn_joint_total = 0  # Number of false negative joints (in annotation but not detected by openpose)
+                error_total = 0  # Used to calculate mpjpe
+
+                for joint in left_openpose_dict[image][skeleton]:
+                    if int(joint) == 8 or int(joint) > 18:  # OpenPose has an extra keypoint between the left and
+                        # right hips, labelled 8, as well as foot keypoints, labelled 19 to 24, that we do not consider
+                        continue
+                    openpose_coordinates = [int(left_openpose_dict[image][skeleton][joint][index]) for index in [0, 1]]
+                    openpose_confidence = left_openpose_dict[image][skeleton][joint][2]
+                    label = openpose_to_annotation_dict[int(joint)]  # corresponding joint label in annotation
+                    annotated_coordinates: object = left_annot_dict[image].get(str(label))  # We use the .get()
+                    # method to handle the cases where the annotation does not have a matching joint, aka,
+                    # a joint false positive
+
+                    if annotated_coordinates:
+                        error = round(math.sqrt(
+                            math.pow(openpose_coordinates[0] - annotated_coordinates[0], 2) +
+                            math.pow(openpose_coordinates[1] - annotated_coordinates[1], 2)), 3)
+                        skeleton_dict[label] = [error, openpose_confidence]  # for each joint, we save its error and
+                        # confidence score (so that we can later plot them both)
+                        error_total += error
+                    else:
+                        #  There is no matching joint in the annotation, this is a "false" positive joint.
+                        skeleton_dict[label] = ['fp', openpose_confidence]  # fp = false positive
+                        fp_joint_total += 1
+
+                    joint_counter_total += 1
+
+                # Check if any annotated joints are missing from this skeleton (false negatives)
+                for label in left_annot_dict[image]:
+                    if int(label) in skeleton_dict:
+                        continue
+                    else:
+                        skeleton_dict[label] = ['fn', 0]
+                        fn_joint_total += 1
+
+                # Save in this skeleton's dictionary:
+                skeleton_dict['joint_counter_total'] = joint_counter_total
+                # Calculate the Mean Per Joint Position Error (in pixels) of this skeleton
+                if joint_counter_total != 0:
+                    mpjpe = round(error_total / joint_counter_total, 4)
+                    skeleton_dict['mpjpe'] = mpjpe
+                    skeleton_dict['fp_joint_total'] = fp_joint_total
+                    skeleton_dict['fn_joint_total'] = fn_joint_total
+
+                if mpjpe_threshold > mpjpe > 0:  # We include the mpjpe > 0 condition in order to not match false
+                    # positive skeletons (which would have error exactly equal to 0 since that is the initial value
+                    # of error_total)
+                    matching_skeleton_total += 1
+                    matching_skeleton_dict[skeleton] = skeleton_dict
+
+        image_dict['openpose_skeleton_total'] = openpose_skeleton_total
+        image_dict['matching_skeleton_total'] = matching_skeleton_total
+        image_dict['matching_skeletons'] = matching_skeleton_dict
+
+        # Calculate the metrics of this image:
+        joint_image_total = 0
+        mpjpe_image_total = 0
+        mpjpe_image_average = 0
+        fp_joint_image_total = 0
+        fn_joint_image_total = 0
+        if len(matching_skeleton_dict) != 0:
+            for matching_skeleton in matching_skeleton_dict:
+                joint_image_total += matching_skeleton_dict[matching_skeleton]['joint_counter_total']
+                mpjpe_image_total += matching_skeleton_dict[matching_skeleton]['mpjpe']
+                fp_joint_image_total += matching_skeleton_dict[matching_skeleton]['fp_joint_total']
+                fn_joint_image_total += matching_skeleton_dict[matching_skeleton]['fn_joint_total']
+            mpjpe_image_average = round(mpjpe_image_total / len(matching_skeleton_dict), 3)
+
+        # Save to image metrics to its dictionary
+        image_dict['joint_image_total'] = joint_image_total
+        image_dict['mpjpe_image_average'] = mpjpe_image_average
+        image_dict['fp_joint_image_total'] = fp_joint_image_total
+        image_dict['fn_joint_image_total'] = fp_joint_image_total
+
+        # Add to variables that will determine overall metrics for this dataset
+        joint_total_left_openpose += joint_image_total
+        mpjpe_left_openpose += mpjpe_image_average
+        fp_joint_total_left_openpose += fp_joint_image_total
+        fn_joint_total_left_openpose += fn_joint_image_total
+
+        results_left_openpose[image] = image_dict
+
+# Overall dataset metrics:
+image_total = left_openpose_dict['Total images']
+results_left_openpose['joint_total_average_per_image'] = round(joint_total_left_openpose / image_total, 3)
+results_left_openpose['mpjpe_average_per_image'] = \
+    round(mpjpe_left_openpose / image_total, 3)
+results_left_openpose['fp_joint_total_average_per_image'] = round(fp_joint_total_left_openpose / image_total, 3)
+results_left_openpose['fn_joint_total_average_per_image'] = round(fn_joint_total_left_openpose / image_total, 3)
+
+if output_flag:
+    with open(output_path + '/results_left_openpose.json', 'w', encoding='utf-8') as f:
+        json.dump(results_left_openpose, f, ensure_ascii=False, indent=4)
+
+print()
+print('Left OpenPose Results json built successfully')
+
+
+# ======================================================================= OpenPose right-small dataset
+results_right_openpose = {}
+
+# Initialize variables that are used to calculate metrics:
+joint_total_right_openpose = 0
+mpjpe_right_openpose = 0  # Total error for all images in this dataset
+fp_joint_total_right_openpose = 0
+fn_joint_total_right_openpose = 0
+
+mpjpe_threshold = 50  # This should be a percentage of the bounding box size but we will ballpark to filter out
+# false positives for now and then later program an adaptive threshold based on height (ymax-ymin) of the skeleton
+
+for image in right_openpose_dict:
+    if image.startswith('right'):  # excludes the keys that are extra information about the number of images
+        image_dict = {}
+
+        # Save values related to annotation:
+        if len(right_annot_dict[image]) == 0:  # In the annotation, there is either a single skeleton or there is none
+            annotated_skeleton_total = 0
+            annotated_joint_total = 0
+        else:
+            annotated_skeleton_total = 1
+            annotated_joint_total = len(right_annot_dict[image])
+        image_dict['annotated_skeleton_total'] = annotated_skeleton_total
+        image_dict['annotated_joint_total'] = annotated_joint_total
+
+        matching_skeleton_total = 0  # the number of skeletons that match with annot (mpjpe is within the threshold)
+        # This helps detect cases where the method detects the operator but does not associate all the joints,
+        # creating more than one detected skeleton.
+        matching_skeleton_dict = {}  # contains dictionaries of each skeleton that matches with annotation
+
+        for skeleton in right_openpose_dict[image]:
+            if str(skeleton).startswith('skeleton_number'):  # extract the number of skeletons OpenPose detected
+                openpose_skeleton_total = right_openpose_dict[image][skeleton]
+            else:  # all other keys are skeletons
+                skeleton_dict = {}  # Temporary dict to save this skeleton's results. The key corresponds to the
+                # joint, using the annotation label, or relevant variables such as joint_counter_total
+
+                joint_counter_total = 0  # Number of total joints detected by OpenPose
+                fp_joint_total = 0  # Number of false positive joints detected by OpenPose (no match in annotation)
+                fn_joint_total = 0  # Number of false negative joints (in annotation but not detected by OpenPose)
+                error_total = 0  # Used to calculate mpjpe
+
+                for joint in right_openpose_dict[image][skeleton]:
+                    if int(joint) == 8 or int(joint) > 18:  # OpenPose has an extra keypoint between the left and
+                        # right hips, labelled 8, as well as foot keypoints, labelled 19 to 24, that we do not consider
+                        continue
+                    openpose_coordinates = [int(right_openpose_dict[image][skeleton][joint][index]) for index in [0, 1]]
+                    openpose_confidence = right_openpose_dict[image][skeleton][joint][2]
+                    label = openpose_to_annotation_dict[int(joint)]  # corresponding joint label in annotation
+                    annotated_coordinates: object = right_annot_dict[image].get(str(label))  # We use the .get()
+                    # method to handle the cases where the annotation does not have a matching joint, aka,
+                    # a joint false positive
+
+                    if annotated_coordinates:
+                        error = round(math.sqrt(
+                            math.pow(openpose_coordinates[0] - annotated_coordinates[0], 2) +
+                            math.pow(openpose_coordinates[1] - annotated_coordinates[1], 2)), 3)
+                        skeleton_dict[label] = [error, openpose_confidence]  # for each joint, we save its error and
+                        # confidence score (so that we can later plot them both)
+                        error_total += error
+                    else:
+                        #  There is no matching joint in the annotation, this is a "false" positive joint.
+                        skeleton_dict[label] = ['fp', openpose_confidence]  # fp = false positive
+                        fp_joint_total += 1
+
+                    joint_counter_total += 1
+
+                # Check if any annotated joints are missing from this skeleton (false negatives)
+                for label in right_annot_dict[image]:
+                    if int(label) in skeleton_dict:
+                        continue
+                    else:
+                        skeleton_dict[label] = ['fn', 0]
+                        fn_joint_total += 1
+
+                # Save in this skeleton's dictionary:
+                skeleton_dict['joint_counter_total'] = joint_counter_total
+                # Calculate the Mean Per Joint Position Error (in pixels) of this skeleton
+                if joint_counter_total != 0:
+                    mpjpe = round(error_total / joint_counter_total, 4)
+                    skeleton_dict['mpjpe'] = mpjpe
+                    skeleton_dict['fp_joint_total'] = fp_joint_total
+                    skeleton_dict['fn_joint_total'] = fn_joint_total
+
+                if mpjpe_threshold > mpjpe > 0:  # We include the mpjpe > 0 condition in order to not match false
+                    # positive skeletons (which would have error exactly equal to 0 since that is the initial value
+                    # of error_total)
+                    matching_skeleton_total += 1
+                    matching_skeleton_dict[skeleton] = skeleton_dict
+
+        image_dict['openpose_skeleton_total'] = openpose_skeleton_total
+        image_dict['matching_skeleton_total'] = matching_skeleton_total
+        image_dict['matching_skeletons'] = matching_skeleton_dict
+
+        # Calculate the metrics of this image:
+        joint_image_total = 0
+        mpjpe_image_total = 0
+        mpjpe_image_average = 0
+        fp_joint_image_total = 0
+        fn_joint_image_total = 0
+        if len(matching_skeleton_dict) != 0:
+            for matching_skeleton in matching_skeleton_dict:
+                joint_image_total += matching_skeleton_dict[matching_skeleton]['joint_counter_total']
+                mpjpe_image_total += matching_skeleton_dict[matching_skeleton]['mpjpe']
+                fp_joint_image_total += matching_skeleton_dict[matching_skeleton]['fp_joint_total']
+                fn_joint_image_total += matching_skeleton_dict[matching_skeleton]['fn_joint_total']
+            mpjpe_image_average = round(mpjpe_image_total / len(matching_skeleton_dict), 3)
+
+        # Save to image metrics to its dictionary
+        image_dict['joint_image_total'] = joint_image_total
+        image_dict['mpjpe_image_average'] = mpjpe_image_average
+        image_dict['fp_joint_image_total'] = fp_joint_image_total
+        image_dict['fn_joint_image_total'] = fp_joint_image_total
+
+        # Add to variables that will determine overall metrics for this dataset
+        joint_total_right_openpose += joint_image_total
+        mpjpe_right_openpose += mpjpe_image_average
+        fp_joint_total_right_openpose += fp_joint_image_total
+        fn_joint_total_right_openpose += fn_joint_image_total
+
+        results_right_openpose[image] = image_dict
+
+# Overall dataset metrics:
+image_total = right_openpose_dict['Total images']
+results_right_openpose['joint_total_average_per_image'] = round(joint_total_right_openpose / image_total, 3)
+results_right_openpose['mpjpe_average_per_image'] = \
+    round(mpjpe_right_openpose / image_total, 3)
+results_right_openpose['fp_joint_total_average_per_image'] = round(fp_joint_total_right_openpose / image_total, 3)
+results_right_openpose['fn_joint_total_average_per_image'] = round(fn_joint_total_right_openpose / image_total, 3)
+
+if output_flag:
+    with open(output_path + '/results_right_openpose.json', 'w', encoding='utf-8') as f:
+        json.dump(results_right_openpose, f, ensure_ascii=False, indent=4)
+
+print()
+print('Right OpenPose Results json built successfully')
